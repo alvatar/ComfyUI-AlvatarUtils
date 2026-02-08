@@ -1,0 +1,7 @@
+# Core dependencies (torch, numpy provided by ComfyUI)
+trimesh
+Pillow
+opencv-python-headless
+spandrel
+safetensors
+transformers
