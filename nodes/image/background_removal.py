@@ -210,7 +210,7 @@ class BackgroundRemoval:
                     "default": "none",
                     "tooltip": "Background color for the output image.\n"
                                "• none (default): Transparent background (RGBA output). Best for feeding "
-                               "into 3D generation models like Trellis or UltraShape.\n"
+                               "into 3D generation models like Trellis.\n"
                                "• white: Solid white background (RGB output). Some models prefer white BG.\n"
                                "• black: Solid black background (RGB output). Useful for debugging mask edges."
                 }),

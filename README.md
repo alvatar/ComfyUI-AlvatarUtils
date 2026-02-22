@@ -25,7 +25,7 @@ High-quality background removal using RMBG-2.0 (BiRefNet) or BEN2. Returns a for
 
 #### Prepare Image for 3D
 
-Detects the foreground object, centers it, and produces a square crop ready for 3D generation (Trellis2, Hunyuan3D, UltraShape, etc.).
+Detects the foreground object, centers it, and produces a square crop ready for 3D generation (Trellis2, etc.).
 
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|

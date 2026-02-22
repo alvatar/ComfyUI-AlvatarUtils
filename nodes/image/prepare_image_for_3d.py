@@ -2,7 +2,7 @@
 PrepareImageFor3D - Detect, center, and square-crop images for 3D generation.
 
 Detects the foreground object using various methods, then centers it
-within a square bounding box. Designed for Trellis2, Hunyuan3D, UltraShape, etc.
+within a square bounding box. Designed for Trellis2, etc.
 
 Detection Method Comparison:
 ┌────────────────────┬──────────┬───────────────────────────────────────────────────┐
@@ -73,7 +73,7 @@ class PrepareImageFor3D:
 
     Why Square Cropping Matters:
     ════════════════════════════
-    Most 3D generation models (Trellis2, Hunyuan3D, UltraShape) expect:
+    Most 3D generation models (Trellis2, etc.) expect:
     - Square input images (1:1 aspect ratio)
     - Object centered in frame
     - Consistent padding around object
@@ -146,7 +146,7 @@ class PrepareImageFor3D:
     CATEGORY = "Alvatar/Image"
     DESCRIPTION = (
         "Detects object, centers it, and crops to square. "
-        "Ideal prep for Trellis2, Hunyuan3D, UltraShape. "
+        "Ideal prep for Trellis2. "
         "Use 'alpha' method after BackgroundRemoval for best results."
     )
 

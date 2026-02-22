@@ -36,7 +36,7 @@ class Continue3:
     Why 3 Channels?
     ═══════════════
     Many 3D workflows have 3 parallel outputs:
-    - Mesh generation (Trellis2, UltraShape)
+    - Mesh generation (Trellis2)
     - Texture generation (Chord, Hunyuan3D texturing)
     - Reference image processing (Upscale, etc.)
 

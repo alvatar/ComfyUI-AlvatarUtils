@@ -6,7 +6,7 @@ Uses the absolute best upscaling models available (2024-2025):
 - HAT-GAN Sharp: Best perceptual/visual sharpness (GAN-enhanced hybrid attention)
 - UltraSharp: Best for compressed/degraded images (trained on JPEG artifacts)
 
-Designed for upscaling to 2048/4096 for Trellis2, Hunyuan3D, UltraShape, etc.
+Designed for upscaling to 2048/4096 for Trellis2, etc.
 
 Model Comparison:
 ┌─────────────────┬────────────┬───────────────────────────────────────────────────┐

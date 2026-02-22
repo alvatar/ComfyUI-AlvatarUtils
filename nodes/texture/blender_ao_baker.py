@@ -28,7 +28,7 @@ class BlenderAOBaker:
                 "mesh_path": ("STRING", {
                     "default": "",
                     "multiline": False,
-                    "tooltip": "Path to mesh file (GLB/OBJ/FBX/PLY/STL). From Trellis Save, UltraShape Save, or file path."
+                    "tooltip": "Path to mesh file (GLB/OBJ/FBX/PLY/STL). From Trellis Save or file path."
                 }),
                 "resolution": ("INT", {
                     "default": 2048, "min": 256, "max": 8192, "step": 256,
@@ -63,7 +63,7 @@ class BlenderAOBaker:
     )
     FUNCTION = "bake_ao"
     CATEGORY = "Alvatar/Texture"
-    DESCRIPTION = "Bakes Ambient Occlusion texture from a mesh file using Blender Cycles. Accepts GLB/OBJ/FBX paths from Trellis Save or UltraShape Save nodes."
+    DESCRIPTION = "Bakes Ambient Occlusion texture from a mesh file using Blender Cycles. Accepts GLB/OBJ/FBX paths from Trellis Save or other mesh export nodes."
 
     def bake_ao(self, mesh_path, resolution, samples, ao_distance, use_gpu=True, margin=16):
         """Bake AO texture using Blender headlessly"""
