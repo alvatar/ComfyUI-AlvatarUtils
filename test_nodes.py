@@ -6,7 +6,7 @@ Run this outside of ComfyUI to verify node logic works correctly.
 Tests:
 - MakeORM: ORM texture packing from grayscale inputs
 - DebugAny: Debug output passthrough
-- ConditionalExecution: Passthrough with activator logic
+- Continue: Dynamic synchronization barrier passthrough
 - ResolvePath: Path resolution (requires mocking folder_paths)
 
 Requirements:
@@ -272,10 +272,10 @@ def test_debug_any():
     return (tests_passed == tests_total, False)  # (passed, skipped)
 
 
-def test_conditional_execution():
-    """Test Continue3 synchronization barrier node passthrough"""
+def test_continue():
+    """Test Continue dynamic synchronization barrier passthrough."""
     print("\n" + "=" * 50)
-    print("Testing Continue3 (Sync Barrier)")
+    print("Testing Continue (Dynamic Sync Barrier)")
     print("=" * 50)
 
     # Import directly from the file to avoid torch dependency from package __init__
@@ -284,49 +284,43 @@ def test_conditional_execution():
         "continue_3",
         os.path.join(os.path.dirname(__file__), "nodes", "utils", "continue_3.py")
     )
-    cond_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(cond_module)
-    Continue3 = cond_module.Continue3
+    continue_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(continue_module)
+    Continue = continue_module.Continue
 
-    node = Continue3()
+    node = Continue()
     tests_passed = 0
     tests_total = 0
 
-    # Test 1: Single input passthrough
+    # Test 1: Base required passthrough (2 inputs)
     tests_total += 1
-    print("\n[Test 1] Single input passthrough (input1 only)...")
-    try:
-        result = node.execute(input1="test_value")
-        assert result[0] == "test_value", f"Expected 'test_value', got {result[0]}"
-        assert result[1] is None, f"Expected None for output2, got {result[1]}"
-        assert result[2] is None, f"Expected None for output3, got {result[2]}"
-        print("  ✓ input1 passed through to output1")
-        tests_passed += 1
-    except Exception as e:
-        print(f"  ✗ Failed: {e}")
-
-    # Test 2: Two inputs passthrough
-    tests_total += 1
-    print("\n[Test 2] Two inputs passthrough...")
+    print("\n[Test 1] Two inputs passthrough (required base)...")
     try:
         result = node.execute(input1="first", input2="second")
-        assert result[0] == "first", f"Expected 'first', got {result[0]}"
-        assert result[1] == "second", f"Expected 'second', got {result[1]}"
-        assert result[2] is None, f"Expected None for output3, got {result[2]}"
-        print("  ✓ Both inputs passed through correctly")
+        assert result == ("first", "second"), f"Unexpected result: {result}"
+        print("  ✓ Required inputs passed through correctly")
         tests_passed += 1
     except Exception as e:
         print(f"  ✗ Failed: {e}")
 
-    # Test 3: All three inputs passthrough
+    # Test 2: Dynamic input passthrough (input3)
     tests_total += 1
-    print("\n[Test 3] Three inputs passthrough...")
+    print("\n[Test 2] Dynamic input passthrough (input3)...")
     try:
         result = node.execute(input1="one", input2="two", input3="three")
-        assert result[0] == "one", f"Expected 'one', got {result[0]}"
-        assert result[1] == "two", f"Expected 'two', got {result[1]}"
-        assert result[2] == "three", f"Expected 'three', got {result[2]}"
-        print("  ✓ All three inputs passed through correctly")
+        assert result == ("one", "two", "three"), f"Unexpected result: {result}"
+        print("  ✓ Dynamic input3 passed through correctly")
+        tests_passed += 1
+    except Exception as e:
+        print(f"  ✗ Failed: {e}")
+
+    # Test 3: Sparse dynamic inputs preserve slot order with None gaps
+    tests_total += 1
+    print("\n[Test 3] Sparse dynamic input index handling...")
+    try:
+        result = node.execute(input1="one", input2="two", input4="four")
+        assert result == ("one", "two", None, "four"), f"Unexpected result: {result}"
+        print("  ✓ Sparse dynamic inputs handled with indexed passthrough")
         tests_passed += 1
     except Exception as e:
         print(f"  ✗ Failed: {e}")
@@ -336,28 +330,30 @@ def test_conditional_execution():
     print("\n[Test 4] Complex object passthrough...")
     try:
         complex_obj = {"mesh": "data", "textures": [1, 2, 3]}
-        result = node.execute(input1=complex_obj, input2=[1, 2, 3])
+        result = node.execute(input1=complex_obj, input2=[1, 2, 3], input3={"k": 9})
         assert result[0] == complex_obj, f"Expected {complex_obj}, got {result[0]}"
         assert result[1] == [1, 2, 3], f"Expected [1, 2, 3], got {result[1]}"
+        assert result[2] == {"k": 9}, f"Expected {{'k': 9}}, got {result[2]}"
         print("  ✓ Complex objects passed through correctly")
         tests_passed += 1
     except Exception as e:
         print(f"  ✗ Failed: {e}")
 
-    # Test 5: No inputs (all None)
+    # Test 5: Enforces at least two required inputs
     tests_total += 1
-    print("\n[Test 5] No inputs (all None)...")
+    print("\n[Test 5] Requires at least two inputs...")
     try:
-        result = node.execute()
-        assert result[0] is None, f"Expected None, got {result[0]}"
-        assert result[1] is None, f"Expected None, got {result[1]}"
-        assert result[2] is None, f"Expected None, got {result[2]}"
-        print("  ✓ All outputs are None when no inputs connected")
+        try:
+            node.execute(input1="only-one")
+            raise AssertionError("Expected TypeError when input2 is missing")
+        except TypeError:
+            pass
+        print("  ✓ Missing required input rejected")
         tests_passed += 1
     except Exception as e:
         print(f"  ✗ Failed: {e}")
 
-    print(f"\nContinue3: {tests_passed}/{tests_total} tests passed")
+    print(f"\nContinue: {tests_passed}/{tests_total} tests passed")
     return (tests_passed == tests_total, False)  # (passed, skipped)
 
 
@@ -897,11 +893,11 @@ def test_input_types():
     spec.loader.exec_module(mod)
     node_classes.append(mod.DebugAny)
 
-    # Continue3 - no dependencies
+    # Continue - no dependencies
     spec = importlib.util.spec_from_file_location("continue_3", os.path.join(nodes_dir, "utils", "continue_3.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    node_classes.append(mod.Continue3)
+    node_classes.append(mod.Continue)
 
     # ResolvePath - needs folder_paths mock
     class MockFolderPaths:
@@ -987,7 +983,7 @@ def run_all_tests():
     # Run all test functions - they return (passed: bool, skipped: bool)
     results.append(("MakeORM", test_make_orm()))
     results.append(("DebugAny", test_debug_any()))
-    results.append(("Continue3", test_conditional_execution()))
+    results.append(("Continue", test_continue()))
     results.append(("ResolvePath", test_resolve_path()))
     results.append(("PrepareImageFor3D", test_preprocess_image()))
     results.append(("BackgroundRemoval", test_background_removal()))

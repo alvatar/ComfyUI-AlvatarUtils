@@ -1,8 +1,8 @@
 # Node imports from categorized subfolders
 from .image import BackgroundRemoval, PrepareImageFor3D, Upscale4x
 from .texture import BlenderAOBaker, BlenderAOBakerFromTrimesh, BlenderRebakeTextures, MakeORM
-from .mesh import LoadGLBToTrimesh, LoadGLBFromPath
-from .utils import ResolvePath, DebugAny, Continue3
+from .mesh import LoadGLBToTrimesh, LoadGLBFromPath, GLTFSimplify
+from .utils import ResolvePath, DebugAny, Continue
 
 __all__ = [
     # Image processing (Alvatar/Image)
@@ -17,8 +17,9 @@ __all__ = [
     # 3D Mesh (Alvatar/3D)
     "LoadGLBToTrimesh",
     "LoadGLBFromPath",
+    "GLTFSimplify",
     # Utilities (Alvatar/Utils)
     "ResolvePath",
     "DebugAny",
-    "Continue3",
+    "Continue",
 ]

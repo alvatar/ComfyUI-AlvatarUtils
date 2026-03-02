@@ -1,117 +1,136 @@
 """
-Continue3 - Synchronization barrier with 3 passthrough channels.
+Continue - Synchronization barrier with dynamic passthrough channels.
 
-Waits for all connected inputs to complete before passing them through.
-Use this to synchronize parallel branches in your workflow.
+Behavior:
+- Starts with 2 required inputs: input1, input2.
+- As additional input sockets are added by the frontend extension (input3, input4, ...),
+  this node accepts them dynamically and passes them through in order.
+- Ensures a dependency checkpoint so all connected upstream branches complete before
+  downstream execution continues.
 
-Why This Node Exists:
-═════════════════════
-ComfyUI executes nodes as soon as their inputs are ready. This is efficient
-but can cause problems:
-
-1. VRAM Competition: Two heavy nodes (Trellis2 + Upscale) might run simultaneously,
-   causing OOM errors. Continue3 forces them to wait for each other.
-
-2. Execution Order: You want A→B→C but there's no data dependency. Connect A's
-   output to Continue3, then Continue3's output (or any connected input) to B.
-
-3. Parallel Sync: Three branches process independently, but you need them ALL
-   done before the next stage. Connect all three to Continue3.
-
-This is the same concept as Trellis2's "Continue" node, but with 3 channels
-instead of 2 for more complex workflows.
+Implementation notes:
+- Dynamic sockets in ComfyUI require a hybrid approach:
+  1) Frontend JS mutates visible inputs/outputs as links are made/removed.
+  2) Backend INPUT_TYPES must tolerate dynamic input names during validation.
+- This file implements the backend half and follows the same validation bypass pattern
+  used by ImpactSwitch-style dynamic nodes.
 """
 
+from __future__ import annotations
 
-class Continue3:
-    """
-    Synchronization barrier with 3 passthrough channels.
+import inspect
+import re
 
-    How It Works:
-    ═════════════
-    ComfyUI won't execute this node until ALL connected inputs are ready.
-    Once executed, it simply passes each input to its corresponding output.
-    This creates a "checkpoint" where parallel branches must sync up.
 
-    Why 3 Channels?
-    ═══════════════
-    Many 3D workflows have 3 parallel outputs:
-    - Mesh generation (Trellis2)
-    - Texture generation (Chord, Hunyuan3D texturing)
-    - Reference image processing (Upscale, etc.)
+class AnyType(str):
+    """Wildcard type accepted by ComfyUI type checks."""
 
-    All three often need to complete before saving/exporting.
+    def __ne__(self, __value: object) -> bool:  # noqa: D401
+        return False
 
-    Typical Use Cases:
-    ══════════════════
-    1. VRAM Management:
-       [Heavy GPU Node A] ─→ input1    output1 ─→ [Heavy GPU Node B]
-       Forces A to finish and release VRAM before B starts.
 
-    2. Multi-Branch Sync:
-       [Trellis2] ─────→ input1    output1 ─→ [SaveMesh]
-       [Upscale] ──────→ input2    output2 ─→ [SaveImage]
-       [Chord] ────────→ input3    output3 ─→ [Apply Textures]
-       All three must complete before ANY downstream node runs.
+class TautologyStr(str):
+    """String type that is equal to any other string for output type indexing."""
 
-    3. Execution Ordering:
-       [Generate] ─→ input1 (used)      output1 ─→ [Process]
-                     input2 (unused)    output2 (ignored)
-       Even with one connection, creates a dependency checkpoint.
+    def __ne__(self, other):  # noqa: D401
+        return False
 
-    Note: Unconnected inputs pass through as None. Connect what you need.
-    """
+
+class ByPassTypeTuple(tuple):
+    """Tuple that repeats index 0 type for any output index > 0."""
+
+    def __getitem__(self, index):
+        if index > 0:
+            index = 0
+        item = super().__getitem__(index)
+        if isinstance(item, str):
+            return TautologyStr(item)
+        return item
+
+
+any_typ = AnyType("*")
+_INPUT_RE = re.compile(r"^input(\d+)$")
+
+
+class _DynamicInputContainer:
+    """Validation bypass container for dynamic inputN slots (N >= 3)."""
+
+    def __contains__(self, item):
+        if not isinstance(item, str) or not item.startswith("input"):
+            return False
+        suffix = item[5:]
+        return suffix.isdigit() and int(suffix) >= 3
+
+    def __getitem__(self, key):
+        return any_typ, {"lazy": True}
+
+
+class Continue:
+    """Dynamic synchronization barrier with passthrough outputs."""
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {
-            "optional": {
-                "input1": ("*", {
-                    "tooltip": (
-                        "First passthrough channel. Accepts any data type. "
-                        "Passed to output1 after ALL connected inputs complete. "
-                        "Leave unconnected if you don't need this channel."
-                    )
-                }),
-                "input2": ("*", {
-                    "tooltip": (
-                        "Second passthrough channel. Accepts any data type. "
-                        "Passed to output2 after ALL connected inputs complete. "
-                        "Leave unconnected if you don't need this channel."
-                    )
-                }),
-                "input3": ("*", {
-                    "tooltip": (
-                        "Third passthrough channel. Accepts any data type. "
-                        "Passed to output3 after ALL connected inputs complete. "
-                        "Leave unconnected if you don't need this channel."
-                    )
-                }),
-            }
+        # Base UI shape: 2 required inputs + one optional seed for dynamic growth.
+        optional_inputs = {
+            "input3": (any_typ, {
+                "lazy": True,
+                "tooltip": "Dynamic passthrough input. Additional inputs are added automatically as you connect slots."
+            }),
         }
 
-    RETURN_TYPES = ("*", "*", "*")
-    RETURN_NAMES = ("output1", "output2", "output3")
+        # During backend input-info validation, allow any inputN >= 3.
+        # This mirrors ImpactSwitch-style dynamic slot validation bypass.
+        if any(frame.function == "get_input_info" for frame in inspect.stack()):
+            optional_inputs = _DynamicInputContainer()
+
+        return {
+            "required": {
+                "input1": (any_typ, {
+                    "tooltip": "Passthrough input 1. Connect to enable synchronization barrier behavior."
+                }),
+                "input2": (any_typ, {
+                    "tooltip": "Passthrough input 2. When both input1 and input2 are connected, a new input slot appears."
+                }),
+            },
+            "optional": optional_inputs,
+        }
+
+    RETURN_TYPES = ByPassTypeTuple((any_typ, any_typ))
+    RETURN_NAMES = ("output1", "output2")
     OUTPUT_TOOLTIPS = (
-        "Passthrough of input1. Available after all connected inputs complete.",
-        "Passthrough of input2. Available after all connected inputs complete.",
-        "Passthrough of input3. Available after all connected inputs complete.",
+        "Passthrough of input1.",
+        "Passthrough of input2.",
     )
     FUNCTION = "execute"
     CATEGORY = "Alvatar/Utils"
     DESCRIPTION = (
-        "Synchronization barrier: waits for all connected inputs to complete, "
-        "then passes them through. Use for VRAM management (sequential GPU ops) "
-        "or to sync parallel branches before the next stage."
+        "Synchronization barrier with dynamic inputs/outputs. "
+        "Starts with 2 inputs, then grows as connections are made."
     )
 
-    def execute(self, input1=None, input2=None, input3=None):
+    def execute(self, input1, input2, **kwargs):
         """
-        Pass through all inputs after they complete.
-        ComfyUI ensures all connected inputs are ready before this executes.
+        Pass through inputs in slot order.
+
+        Dynamic slots are expected as kwargs named input3, input4, ...
+        Missing intermediate dynamic slots are returned as None to preserve index order.
         """
-        return (input1, input2, input3)
+        dynamic_inputs = {}
+        max_index = 2
 
+        for key, value in kwargs.items():
+            match = _INPUT_RE.match(key)
+            if not match:
+                continue
+            idx = int(match.group(1))
+            if idx < 3:
+                continue
+            dynamic_inputs[idx] = value
+            if idx > max_index:
+                max_index = idx
 
-# Keep backward compatibility alias
-ConditionalExecution = Continue3
+        outputs = [input1, input2]
+        for idx in range(3, max_index + 1):
+            outputs.append(dynamic_inputs.get(idx))
+
+        return tuple(outputs)

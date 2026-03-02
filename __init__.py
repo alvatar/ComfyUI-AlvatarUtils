@@ -5,8 +5,8 @@ Unified plugin for image processing, texture processing, 3D mesh handling, and w
 Categories:
 - Alvatar/Image: BackgroundRemoval, PrepareImageFor3D, Upscale4x
 - Alvatar/Texture: BlenderAOBaker, BlenderAOBakerFromTrimesh, BlenderRebakeTextures, MakeORM
-- Alvatar/3D: LoadGLBToTrimesh, LoadGLBFromPath
-- Alvatar/Utils: ResolvePath, DebugAny, Continue3
+- Alvatar/3D: LoadGLBToTrimesh, LoadGLBFromPath, GLTFSimplify
+- Alvatar/Utils: ResolvePath, DebugAny, Continue
 """
 
 __version__ = "2.4.0"
@@ -25,10 +25,11 @@ from .nodes import (
     # 3D Mesh (Alvatar/3D)
     LoadGLBToTrimesh,
     LoadGLBFromPath,
+    GLTFSimplify,
     # Utilities (Alvatar/Utils)
     ResolvePath,
     DebugAny,
-    Continue3,
+    Continue,
 )
 
 # Node registration
@@ -45,10 +46,11 @@ NODE_CLASS_MAPPINGS = {
     # 3D Mesh (Alvatar/3D)
     "LoadGLBToTrimesh": LoadGLBToTrimesh,
     "LoadGLBFromPath": LoadGLBFromPath,
+    "GLTFSimplify": GLTFSimplify,
     # Utilities (Alvatar/Utils)
     "ResolvePath": ResolvePath,
     "DebugAny": DebugAny,
-    "Continue3": Continue3,
+    "Continue": Continue,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -64,10 +66,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # 3D Mesh (Alvatar/3D)
     "LoadGLBToTrimesh": "Load GLB to Trimesh",
     "LoadGLBFromPath": "Load GLB from Path",
+    "GLTFSimplify": "GLTF Simplify",
     # Utilities (Alvatar/Utils)
     "ResolvePath": "Resolve Path",
     "DebugAny": "Debug Any",
-    "Continue3": "Continue 3",
+    "Continue": "Continue",
 }
 
 # Web directory for JavaScript extensions

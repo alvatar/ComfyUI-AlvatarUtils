@@ -1,6 +1,6 @@
 # ComfyUI-AlvatarUtils
 
-Custom nodes for ComfyUI focused on 3D asset production pipelines: background removal, image preparation, 4x upscaling, GLB mesh loading with PBR texture extraction, Blender-based AO baking and texture rebaking, and workflow utilities.
+Custom nodes for ComfyUI focused on 3D asset production pipelines: background removal, image preparation, 4x upscaling, GLB mesh loading with PBR texture extraction, glTF mesh simplification, Blender-based AO baking and texture rebaking, and workflow utilities.
 
 ## Nodes
 
@@ -25,7 +25,7 @@ High-quality background removal using RMBG-2.0 (BiRefNet) or BEN2. Returns a for
 
 #### Prepare Image for 3D
 
-Detects the foreground object, centers it, and produces a square crop ready for 3D generation (Trellis2, etc.).
+Detects the foreground object, centers it, and produces a square crop ready for 3D generation (Trellis2, Hunyuan3D, UltraShape, etc.).
 
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -77,6 +77,32 @@ Same as above but takes a path string instead of a file dropdown. Useful for cha
 | file_path | STRING | Absolute or relative path to mesh file |
 
 **Outputs:** `trimesh` (TRIMESH), `albedo` (IMAGE), `normal` (IMAGE), `metallic_roughness` (IMAGE), `occlusion` (IMAGE)
+
+#### GLTF Simplify
+
+Runs glTF-Transform simplify (meshoptimizer) from ComfyUI. Wraps:
+
+```bash
+gltf-transform simplify input.glb output.glb --ratio 0.5 --error 0.001
+```
+
+Execution backend: node prefers a local `gltf-transform` binary, with optional fallback to `npx @gltf-transform/cli`.
+
+Omitted CLI globals: `--verbose`, `--config`, and `--allow-net` (not useful for this local-file node UI).
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| file_path | STRING | — | Input GLB/GLTF path (absolute or relative to input/output/temp) |
+| ratio | FLOAT | 0.5 | `--ratio` target keep ratio (0..1) |
+| error | FLOAT | 0.001 | `--error` max allowed simplification error |
+| lock_border | BOOL | False | `--lock-border` preserve topological borders |
+| output_path | STRING | auto | Output file path (auto in output/ if empty) |
+| vertex_layout | choice | interleaved | `--vertex-layout` (`interleaved`/`separate`) |
+| runner | choice | auto | `auto`, `gltf-transform`, or `npx` |
+| timeout_sec | INT | 600 | Subprocess timeout |
+| overwrite | BOOL | True | Overwrite output file or suffix uniquely |
+
+**Outputs:** `trimesh` (TRIMESH), `output_path` (STRING), `albedo` (IMAGE), `normal` (IMAGE), `metallic_roughness` (IMAGE), `occlusion` (IMAGE)
 
 ---
 
@@ -154,11 +180,11 @@ Accepts any input type, displays type info (shape, dtype, device, value preview)
 
 **Outputs:** `output` (*), `debug_text` (STRING)
 
-#### Continue 3
+#### Continue
 
-Synchronization barrier with 3 passthrough channels (all optional). Forces all connected inputs to complete before any output is available. Useful for VRAM management and parallel branch synchronization.
+Synchronization barrier with dynamic passthrough channels. Starts with 2 inputs, and when both are connected a new input appears (`input3`), then `input4`, and so on. Forces all connected inputs to complete before downstream execution, useful for VRAM management and parallel branch synchronization.
 
-**Outputs:** `output1` (*), `output2` (*), `output3` (*)
+**Outputs:** Dynamic `output1..N` passthroughs matching connected inputs.
 
 ---
 
@@ -177,6 +203,8 @@ transformers
 
 **System dependencies:**
 - Blender 3.0+ (for AO baking and texture rebaking nodes)
+- glTF-Transform CLI (`gltf-transform`) recommended for GLTF Simplify node
+  - fallback: Node.js + `npx @gltf-transform/cli`
 - CUDA-capable GPU (optional, for GPU-accelerated baking and upscaling)
 
 ## Installation
