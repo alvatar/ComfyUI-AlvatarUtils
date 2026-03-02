@@ -58,11 +58,11 @@ Detection methods: **alpha** (use existing transparency), **uniform_background**
 
 #### Load GLB to Trimesh
 
-Loads a mesh file from ComfyUI's input directory and extracts all embedded PBR textures in glTF format.
+Loads a mesh file from ComfyUI's input directory and extracts all embedded PBR textures in glTF format. Supports direct browser upload via an in-node "Upload mesh" button.
 
 | Input | Type | Description |
 |-------|------|-------------|
-| mesh_file | file dropdown | GLB, GLTF, OBJ, PLY, STL |
+| mesh_file | file dropdown | GLB, GLTF, OBJ, PLY, STL (recursive input subfolders; upload button available) |
 
 **Outputs:** `trimesh` (TRIMESH), `file_path` (STRING), `albedo` (IMAGE), `normal` (IMAGE), `metallic_roughness` (IMAGE), `occlusion` (IMAGE)
 
@@ -70,11 +70,12 @@ Texture channels follow glTF convention: metallic_roughness has G=Roughness, B=M
 
 #### Load GLB from Path
 
-Same as above but takes a path string instead of a file dropdown. Useful for chaining with nodes that output file paths.
+Same as above but takes a path string instead of a file dropdown. Useful for chaining with nodes that output file paths. Also supports direct browser upload via an in-node "Upload mesh" button.
 
 | Input | Type | Description |
 |-------|------|-------------|
-| file_path | STRING | Absolute or relative path to mesh file |
+| file_path | STRING | Absolute or relative path to mesh file (input/output/temp). If empty, uses mesh_file. |
+| mesh_file | file dropdown (optional) | File picker from input dir (supports subfolders; upload button available). |
 
 **Outputs:** `trimesh` (TRIMESH), `albedo` (IMAGE), `normal` (IMAGE), `metallic_roughness` (IMAGE), `occlusion` (IMAGE)
 

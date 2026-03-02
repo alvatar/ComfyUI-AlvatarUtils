@@ -15,6 +15,49 @@ import trimesh
 import folder_paths
 
 
+MESH_EXTENSIONS = ('.glb', '.gltf', '.obj', '.ply', '.stl')
+
+
+def _normalize_relpath(path: str) -> str:
+    """Normalize to forward slashes for Comfy widget values."""
+    return path.replace('\\', '/')
+
+
+def _list_mesh_files(input_dir: str):
+    """Recursively list mesh files relative to input_dir."""
+    mesh_files = []
+    if not os.path.exists(input_dir):
+        return mesh_files
+
+    for root, _dirs, files in os.walk(input_dir):
+        for f in files:
+            if f.lower().endswith(MESH_EXTENSIONS):
+                rel = os.path.relpath(os.path.join(root, f), input_dir)
+                mesh_files.append(_normalize_relpath(rel))
+
+    mesh_files.sort()
+    return mesh_files
+
+
+def _resolve_input_mesh_path(input_dir: str, mesh_file: str):
+    """Resolve and sandbox-check mesh path under input_dir."""
+    if not mesh_file or mesh_file == "no mesh files found":
+        return None
+
+    input_abs = os.path.abspath(input_dir)
+    candidate_abs = os.path.abspath(os.path.join(input_abs, mesh_file))
+
+    try:
+        common = os.path.commonpath([input_abs, candidate_abs])
+    except ValueError:
+        return None
+
+    if common != input_abs:
+        return None
+
+    return candidate_abs
+
+
 def _pil_to_tensor(img):
     """Convert PIL Image to ComfyUI tensor format [B, H, W, C]"""
     if img is None:
@@ -123,20 +166,14 @@ class LoadGLBToTrimesh:
     @classmethod
     def INPUT_TYPES(cls):
         input_dir = folder_paths.get_input_directory()
-        mesh_extensions = ('.glb', '.gltf', '.obj', '.ply', '.stl')
-        mesh_files = []
-
-        if os.path.exists(input_dir):
-            for f in os.listdir(input_dir):
-                if f.lower().endswith(mesh_extensions):
-                    mesh_files.append(f)
+        mesh_files = _list_mesh_files(input_dir)
 
         if not mesh_files:
             mesh_files = ["no mesh files found"]
 
         return {
             "required": {
-                "mesh_file": (sorted(mesh_files), {
+                "mesh_file": (mesh_files, {
                     "tooltip": "Select or upload a 3D mesh file. Supported: GLB, GLTF, OBJ, PLY, STL.",
                     "file_upload": True,
                 }),
@@ -161,8 +198,8 @@ class LoadGLBToTrimesh:
     def IS_CHANGED(cls, mesh_file):
         """Return file modification time to detect changes."""
         input_dir = folder_paths.get_input_directory()
-        file_path = os.path.join(input_dir, mesh_file)
-        if os.path.exists(file_path):
+        file_path = _resolve_input_mesh_path(input_dir, mesh_file)
+        if file_path and os.path.exists(file_path):
             return os.path.getmtime(file_path)
         return float('nan')
 
@@ -171,17 +208,24 @@ class LoadGLBToTrimesh:
         """Validate that the mesh file exists."""
         if mesh_file == "no mesh files found":
             return "No mesh files found in input directory. Please upload a GLB/GLTF/OBJ file."
+
         input_dir = folder_paths.get_input_directory()
-        file_path = os.path.join(input_dir, mesh_file)
+        file_path = _resolve_input_mesh_path(input_dir, mesh_file)
+
+        if file_path is None:
+            return f"Invalid mesh path (outside input dir): {mesh_file}"
         if not os.path.exists(file_path):
             return f"Mesh file not found: {mesh_file}"
+
         return True
 
     def load_mesh(self, mesh_file):
         """Load mesh file and return as trimesh object with all PBR textures."""
         input_dir = folder_paths.get_input_directory()
-        file_path = os.path.join(input_dir, mesh_file)
+        file_path = _resolve_input_mesh_path(input_dir, mesh_file)
 
+        if file_path is None:
+            raise ValueError(f"Invalid mesh path (outside input dir): {mesh_file}")
         if not os.path.exists(file_path):
             raise ValueError(f"Mesh file not found: {file_path}")
 

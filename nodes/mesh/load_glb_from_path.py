@@ -7,7 +7,7 @@ import torch
 import trimesh
 import folder_paths
 
-from .load_glb_to_trimesh import extract_textures_from_mesh
+from .load_glb_to_trimesh import extract_textures_from_mesh, _list_mesh_files
 
 
 class LoadGLBFromPath:
@@ -18,14 +18,26 @@ class LoadGLBFromPath:
 
     @classmethod
     def INPUT_TYPES(cls):
+        input_dir = folder_paths.get_input_directory()
+        mesh_files = _list_mesh_files(input_dir)
+        if not mesh_files:
+            mesh_files = ["no mesh files found"]
+
         return {
             "required": {
                 "file_path": ("STRING", {
                     "default": "",
                     "multiline": False,
-                    "tooltip": "Path to mesh file (GLB/GLTF/OBJ/PLY/STL). Can be absolute or relative to input/output directory."
+                    "tooltip": "Path to mesh file (GLB/GLTF/OBJ/PLY/STL). Can be absolute or relative to input/output/temp directories.",
+                    "file_upload": True,
                 }),
-            }
+            },
+            "optional": {
+                "mesh_file": (mesh_files, {
+                    "tooltip": "Optional picker from input directory (supports subfolders). Used when file_path is empty.",
+                    "file_upload": True,
+                }),
+            },
         }
 
     RETURN_TYPES = ("TRIMESH", "IMAGE", "IMAGE", "IMAGE", "IMAGE")
@@ -41,23 +53,33 @@ class LoadGLBFromPath:
     CATEGORY = "Alvatar/3D"
     DESCRIPTION = "Loads a mesh file from a path string. Extracts all PBR textures in native glTF format."
 
-    def load_mesh(self, file_path):
+    def load_mesh(self, file_path, mesh_file=""):
         """Load mesh file from path and return as trimesh object with all PBR textures."""
+        selected_path = (file_path or "").strip()
+        if not selected_path and mesh_file and mesh_file != "no mesh files found":
+            selected_path = mesh_file
+
+        if not selected_path:
+            raise ValueError("No mesh path provided. Set file_path or select mesh_file.")
+
         # Resolve path
         resolved_path = None
 
-        if os.path.isabs(file_path) and os.path.exists(file_path):
-            resolved_path = file_path
+        if os.path.isabs(selected_path) and os.path.exists(selected_path):
+            resolved_path = selected_path
         else:
-            for base_dir in [folder_paths.get_input_directory(),
-                             folder_paths.get_output_directory()]:
-                test_path = os.path.join(base_dir, file_path)
+            for base_dir in [
+                folder_paths.get_input_directory(),
+                folder_paths.get_output_directory(),
+                folder_paths.get_temp_directory(),
+            ]:
+                test_path = os.path.join(base_dir, selected_path)
                 if os.path.exists(test_path):
                     resolved_path = test_path
                     break
 
         if not resolved_path:
-            raise ValueError(f"Mesh file not found: {file_path}")
+            raise ValueError(f"Mesh file not found: {selected_path}")
 
         print(f"[LoadGLBFromPath] Loading: {resolved_path}")
 
