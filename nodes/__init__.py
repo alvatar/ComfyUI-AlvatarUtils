@@ -1,7 +1,7 @@
 # Node imports from categorized subfolders
 from .image import BackgroundRemoval, PrepareImageFor3D, Upscale4x
 from .texture import BlenderAOBaker, BlenderAOBakerFromTrimesh, BlenderRebakeTextures, MakeORM
-from .mesh import LoadGLBToTrimesh, LoadGLBFromPath, GLTFSimplify
+from .mesh import LoadGLBToTrimesh, LoadGLBFromPath, GLTFSimplify, BlenderRemeshRebake
 from .utils import ResolvePath, DebugAny, Continue
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     "LoadGLBToTrimesh",
     "LoadGLBFromPath",
     "GLTFSimplify",
+    "BlenderRemeshRebake",
     # Utilities (Alvatar/Utils)
     "ResolvePath",
     "DebugAny",

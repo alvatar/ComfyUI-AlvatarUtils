@@ -1,6 +1,6 @@
 # ComfyUI-AlvatarUtils
 
-Custom nodes for ComfyUI focused on 3D asset production pipelines: background removal, image preparation, 4x upscaling, GLB mesh loading with PBR texture extraction, glTF mesh simplification, Blender-based AO baking and texture rebaking, and workflow utilities.
+Custom nodes for ComfyUI focused on 3D asset production pipelines: background removal, image preparation, 4x upscaling, GLB mesh loading with PBR texture extraction, glTF mesh simplification, Blender-based remesh+rebake pipelines (target triangles + PBR maps), AO baking, and workflow utilities.
 
 ## Nodes
 
@@ -103,6 +103,53 @@ Omitted CLI globals: `--verbose`, `--config`, and `--allow-net` (not useful for 
 | overwrite | BOOL | True | Overwrite output file or suffix uniquely |
 
 **Outputs:** `trimesh` (TRIMESH), `output_path` (STRING), `albedo` (IMAGE), `normal` (IMAGE), `metallic_roughness` (IMAGE), `occlusion` (IMAGE)
+
+#### Blender Remesh + Rebake
+
+Runs a Blender headless pipeline to voxel-remesh toward a target triangle budget and rebake PBR textures.
+
+The node wraps `nodes/mesh/scripts/blender_remesh_rebake_cli.py` and exposes the important quality knobs:
+
+- triangle targeting (`target_triangles`, `tri_tolerance`, `max_search_steps`)
+- geometry cleanup (`remove_floaters`, thresholds)
+- UV strategy (`uv_method`, seam/angle/margin)
+- shading (`smooth_angle`, weighted normals)
+- projection control (`auto_projection` or manual ray/cage)
+- map baking toggles (`normal`, `roughness`, `metallic`, `ao`, `emission`)
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| file_path | STRING | — | Input GLB/GLTF path (absolute or relative to input/output/temp) |
+| target_triangles | INT | 250000 | Target triangle budget |
+| output_path | STRING | auto | Output file path |
+| tri_tolerance | FLOAT | 0.03 | Accepted triangle deviation (±3%) |
+| max_search_steps | INT | 10 | Voxel search iterations |
+| bake_resolution | INT | 2048 | Texture resolution |
+| bake_margin | INT | 40 | Bake margin (pixels) |
+| samples | INT | 32 | Cycles samples |
+| smooth_angle | FLOAT | 75 | Smoothing angle |
+| weighted_normals | BOOL | True | Apply weighted normals |
+| transfer_source_normals | BOOL | False | Transfer source custom normals |
+| remove_floaters | BOOL | True | Remove disconnected components |
+| floater_min_triangles | INT | 384 | Floater min triangle threshold |
+| floater_min_ratio | FLOAT | 0.002 | Floater min ratio threshold |
+| uv_method | choice | smart | `smart` or `angle` |
+| uv_angle | FLOAT | 72 | Smart UV angle |
+| uv_seam_angle | FLOAT | 65 | Edge seam threshold for angle unwrap |
+| uv_island_margin | FLOAT | 0.003 | UV island margin |
+| auto_projection | BOOL | True | Auto derive ray/cage from mesh scale + voxel size |
+| ray_distance | FLOAT | 0.005 | Manual ray distance (when auto off) |
+| cage_extrusion | FLOAT | 0.0025 | Manual cage extrusion (when auto off) |
+| bake_normal | BOOL | True | Bake normal map |
+| bake_roughness | BOOL | True | Bake roughness map |
+| bake_metallic | BOOL | True | Bake metallic map |
+| bake_ao | BOOL | True | Bake AO map |
+| bake_emission | BOOL | False | Bake emission map |
+| force_cpu | BOOL | False | Force CPU rendering |
+| timeout_sec | INT | 7200 | Blender timeout |
+| overwrite | BOOL | True | Overwrite output file |
+
+**Outputs:** `trimesh` (TRIMESH), `output_path` (STRING), `albedo` (IMAGE), `normal` (IMAGE), `roughness` (IMAGE), `metallic` (IMAGE), `ao` (IMAGE)
 
 ---
 

@@ -5,7 +5,7 @@ Unified plugin for image processing, texture processing, 3D mesh handling, and w
 Categories:
 - Alvatar/Image: BackgroundRemoval, PrepareImageFor3D, Upscale4x
 - Alvatar/Texture: BlenderAOBaker, BlenderAOBakerFromTrimesh, BlenderRebakeTextures, MakeORM
-- Alvatar/3D: LoadGLBToTrimesh, LoadGLBFromPath, GLTFSimplify
+- Alvatar/3D: LoadGLBToTrimesh, LoadGLBFromPath, GLTFSimplify, BlenderRemeshRebake
 - Alvatar/Utils: ResolvePath, DebugAny, Continue
 """
 
@@ -26,6 +26,7 @@ from .nodes import (
     LoadGLBToTrimesh,
     LoadGLBFromPath,
     GLTFSimplify,
+    BlenderRemeshRebake,
     # Utilities (Alvatar/Utils)
     ResolvePath,
     DebugAny,
@@ -47,6 +48,7 @@ NODE_CLASS_MAPPINGS = {
     "LoadGLBToTrimesh": LoadGLBToTrimesh,
     "LoadGLBFromPath": LoadGLBFromPath,
     "GLTFSimplify": GLTFSimplify,
+    "BlenderRemeshRebake": BlenderRemeshRebake,
     # Utilities (Alvatar/Utils)
     "ResolvePath": ResolvePath,
     "DebugAny": DebugAny,
@@ -67,6 +69,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoadGLBToTrimesh": "Load GLB to Trimesh",
     "LoadGLBFromPath": "Load GLB from Path",
     "GLTFSimplify": "GLTF Simplify",
+    "BlenderRemeshRebake": "Blender Remesh + Rebake",
     # Utilities (Alvatar/Utils)
     "ResolvePath": "Resolve Path",
     "DebugAny": "Debug Any",
